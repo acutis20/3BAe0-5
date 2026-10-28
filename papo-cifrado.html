@@ -135,6 +135,7 @@ dialog::backdrop { background: rgba(20, 16, 40, .45); }
 .abc .cell b { font-family: var(--font-code); font-size: 12px; color: var(--muted); }
 .abc .cell input { width: 100%; text-align: center; font-size: 20px; border: none; background: transparent; padding: 2px 0; }
 .abc .cell span.sym { font-size: 20px; }
+.abc .cell span.sym.small { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; text-align: center; }
 .abc .cell.bad { background: color-mix(in srgb, var(--tomato) 35%, var(--bg)); }
 .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
 .err { color: var(--tomato); font-weight: 800; font-size: 13px; min-height: 1em; }
@@ -230,12 +231,19 @@ dialog::backdrop { background: rgba(20, 16, 40, .45); }
   const FLIP = fromList(["ɐ","q","ɔ","p","ǝ","ɟ","ƃ","ɥ","ᴉ","ɾ","ʞ","l","ɯ","u","o","d","b","ɹ","s","ʇ","n","ʌ","ʍ","x","ʎ","z"]);
   const PARTY = ["😎","🤡","👽","🤖","👻","💩","🙈","🦆","🐸","🍔","🍟","🌭","🍩","🎈","🎃","⚽","🎮","🛸","🚀","💎","🧠","👀","🦷","🧦","🍄","🌶️","🥑","🐌","🦀","🐢","🦩","🥨","🧁","🍿","🎺","🪩","🛼","🪅","🧲","🦕"];
   const defaultGang = () => fromList(shuffle(PARTY).slice(0, 26));
+  const MORSE = fromList(["•–","–•••","–•–•","–••","•","••–•","––•","••••","••","•–––","–•–","•–••","––","–•","–––","•––•","––•–","•–•","•••","–","••–","•••–","•––","–••–","–•––","––••"]);
+  const BICHO = fromList(["au","miau","muu","mééé","óinc","quack","cocoricó","piu","iiirrí","croac","uh-uh","ssss","grrr","auuu","uhu","bzzz","blub","cri-cri","glu-glu","ióó","cuco","pruu","rawr","ribbit","tchiu","cocó"]);
+  const NUMS = fromList(LETTERS.map((_, i) => String(i + 1)));
+  const TOKEN = { num: [NUMS, "-", "  "], morse: [MORSE, " ", " / "], bicho: [BICHO, " ", " 🐾 "] };
 
   const CIPHERS = {
     emoji:  { label: "🍕 Emojês", hint: "Cada letra vira um emoji. A = 🍕, B = 🐝…" },
     galaxy: { label: "👽 Galáctico", hint: "O alfabeto dos aliens (aquele do Minecraft)." },
     flip:   { label: "🙃 De cabeça pra baixo", hint: "Vira tudo de ponta-cabeça e de trás pra frente." },
     num:    { label: "🔢 Numerês", hint: "A=1, B=2… letras separadas por traço." },
+    lingp:  { label: "🅿️ Língua do P", hint: "Depois de cada vogal vem um P com a mesma vogal: casa = capasapa." },
+    morse:  { label: "📡 Morse", hint: "Pontinho e tracinho, igual telégrafo. Palavras separadas por /." },
+    bicho:  { label: "🐮 Bicharada", hint: "Cada letra é o barulho de um bicho. Palavras separadas por 🐾." },
     gang:   { label: "🤫 Alfabeto da galera", hint: "Vocês inventam! Edita em Alfabetos." },
   };
 
@@ -244,13 +252,20 @@ dialog::backdrop { background: rgba(20, 16, 40, .45); }
     const rev = Object.fromEntries(Object.entries(map).map(([k, v]) => [v, k]));
     return graphemes(code).map((c) => rev[c] ?? c).join("");
   }
+  function tokenEncode(text, [map, sep, wsep]) {
+    return normalize(text).trim().split(/\s+/).filter(Boolean).map((w) => graphemes(w).map((c) => map[c] ?? c).join(sep)).join(wsep);
+  }
+  function tokenDecode(code, [map, sep, wsep]) {
+    const rev = Object.fromEntries(Object.entries(map).map(([k, v]) => [v, k]));
+    return code.split(wsep).map((w) => w.trim().split(sep).filter(Boolean).map((t) => rev[t.toLowerCase()] ?? t).join("")).join(" ");
+  }
   function encode(cipher, text, gang) {
     if (cipher === "emoji") return mapEncode(text, EMOJI);
     if (cipher === "galaxy") return mapEncode(text, GALAXY);
     if (cipher === "gang") return mapEncode(text, gang);
     if (cipher === "flip") return graphemes(mapEncode(text, FLIP)).reverse().join("");
-    if (cipher === "num") return normalize(text).trim().split(/\s+/).filter(Boolean)
-      .map((w) => graphemes(w).map((c) => LETTERS.includes(c) ? String(LETTERS.indexOf(c) + 1) : c).join("-")).join("  ");
+    if (TOKEN[cipher]) return tokenEncode(text, TOKEN[cipher]);
+    if (cipher === "lingp") return normalize(text).replace(/([aeiou])/g, "$1p$1");
     return text;
   }
   function decode(cipher, code, gang) {
@@ -258,7 +273,8 @@ dialog::backdrop { background: rgba(20, 16, 40, .45); }
     if (cipher === "galaxy") return mapDecode(code, GALAXY);
     if (cipher === "gang") return mapDecode(code, gang || {});
     if (cipher === "flip") return mapDecode(graphemes(code).reverse().join(""), FLIP);
-    if (cipher === "num") return code.split(/\s{2,}/).map((w) => w.split("-").map((t) => /^\d+$/.test(t) && +t >= 1 && +t <= 26 ? LETTERS[+t - 1] : t).join("")).join(" ");
+    if (TOKEN[cipher]) return tokenDecode(code, TOKEN[cipher]);
+    if (cipher === "lingp") return code.replace(/([aeiou])p\1/gi, "$1");
     return code;
   }
   const squash = (s) => normalize(s).replace(/[^a-z0-9]/g, "");
@@ -316,7 +332,7 @@ dialog::backdrop { background: rgba(20, 16, 40, .45); }
   function updatePreview() {
     const t = $("text").value;
     $("preview").textContent = t.trim() ? encode(state.cipher, t, state.gang) : "";
-    $("preview").classList.toggle("num", state.cipher === "num");
+    $("preview").classList.toggle("num", state.cipher === "num" || state.cipher === "morse");
   }
   $("text").addEventListener("input", updatePreview);
 
@@ -344,7 +360,8 @@ dialog::backdrop { background: rgba(20, 16, 40, .45); }
       mk("Capivara Turbo", "🦊", "emoji", "bora no role hoje?", { ago: 9, reactions: { "😂": { x: true } } }),
       mk("Pudim Ninja", "🐼", "galaxy", "so se tiver pizza", { ago: 7 }),
       mk("Capivara Turbo", "🦊", "flip", "tem pizza sim", { ago: 5 }),
-      mk("Pudim Ninja", "🐼", "num", "fechou", { ago: 3, challenge: true }),
+      mk("Pudim Ninja", "🐼", "bicho", "fechou", { ago: 3, challenge: true }),
+      mk("Capivara Turbo", "🦊", "lingp", "partiu pizzaria", { ago: 2 }),
     ];
   };
 
@@ -447,7 +464,7 @@ dialog::backdrop { background: rgba(20, 16, 40, .45); }
     if (m.challenge) meta.append(el("span", "cipher-badge", "🧩 desafio"));
     b.append(meta);
 
-    const code = el("div", "code" + (m.cipher === "num" ? " num" : ""), m.code);
+    const code = el("div", "code" + (m.cipher === "num" || m.cipher === "morse" ? " num" : m.cipher === "bicho" || m.cipher === "lingp" ? " plain" : ""), m.code);
     b.append(code);
     const plain = decode(m.cipher, m.code, m.alpha);
     const solvers = Object.values(m.solved || {}).filter((v) => typeof v === "string");
@@ -550,7 +567,9 @@ dialog::backdrop { background: rgba(20, 16, 40, .45); }
       ? "Esse é o alfabeto só da sua sala. Troque qualquer símbolo (um emoji ou caractere por letra, sem repetir) e salve. Mensagens antigas continuam decifráveis."
       : CIPHERS[dlgTab].hint + " Use essa colinha até decorar.";
     $("abcErr").textContent = "";
-    const map = dlgTab === "emoji" ? EMOJI : dlgTab === "galaxy" ? GALAXY : dlgTab === "flip" ? FLIP : dlgTab === "num" ? fromList(LETTERS.map((_, i) => String(i + 1))) : draft;
+    const map = { emoji: EMOJI, galaxy: GALAXY, flip: FLIP, num: NUMS, morse: MORSE, bicho: BICHO,
+      lingp: fromList(LETTERS.map((l) => "aeiou".includes(l) ? l + "p" + l : l)) }[dlgTab] || draft;
+    const small = ["morse", "bicho", "lingp"].includes(dlgTab);
     const dupes = dlgTab === "gang" ? findDupes(draft) : new Set();
     $("abcGrid").replaceChildren(...LETTERS.map((l) => {
       const c = el("div", "cell" + (dupes.has(l) ? " bad" : ""));
@@ -559,7 +578,7 @@ dialog::backdrop { background: rgba(20, 16, 40, .45); }
         const i = el("input"); i.id = "abc-" + l; i.value = draft[l] || ""; i.setAttribute("aria-label", "Símbolo da letra " + l.toUpperCase());
         i.onchange = () => { const g = graphemes(i.value.trim()); draft[l] = g[g.length - 1] || ""; renderDlg(); };
         c.append(i);
-      } else c.append(el("span", "sym", map[l]));
+      } else c.append(el("span", "sym" + (small ? " small" : ""), map[l]));
       return c;
     }));
     const acts = [];
