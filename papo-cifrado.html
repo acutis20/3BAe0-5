@@ -1,0 +1,599 @@
+<title>Papo Cifrado</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: um app de tela única, estilo adesivo — cabeçalho, mural de mensagens rolável, compositor fixo embaixo. */
+:root {
+  --bg: #fff8e7;          /* papel de caderno */
+  --panel: #ffffff;
+  --ink: #1d1a2b;         /* contorno dos adesivos */
+  --muted: #6d6680;
+  --lemon: #ffd93d;
+  --tomato: #ff6b4a;
+  --mint: #46d6a5;
+  --sky: #6cc4ff;
+  --me: #ffd93d;
+  --them: #ffffff;
+  --shadow: #1d1a2b;
+  --font-display: "Bagel Fat One", "Arial Black", system-ui, sans-serif;
+  --font-body: "Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-code: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17142a; --panel: #231f3b; --ink: #f4eedc; --muted: #a7a0bf;
+    --lemon: #f5c518; --tomato: #ff7a5c; --mint: #3fcf9c; --sky: #5ab6f5;
+    --me: #3a3160; --them: #231f3b; --shadow: #000000; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #17142a; --panel: #231f3b; --ink: #f4eedc; --muted: #a7a0bf;
+  --lemon: #f5c518; --tomato: #ff7a5c; --mint: #3fcf9c; --sky: #5ab6f5;
+  --me: #3a3160; --them: #231f3b; --shadow: #000000; color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px;
+  background-image: radial-gradient(color-mix(in srgb, var(--ink) 9%, transparent) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--sky); outline-offset: 2px; }
+
+.app {
+  height: 100%; max-width: 760px; margin: 0 auto; display: flex; flex-direction: column;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px;
+  gap: 10px;
+}
+
+/* sticker primitive */
+.stk { background: var(--panel); border: 2.5px solid var(--ink); border-radius: 16px; box-shadow: 3px 3px 0 var(--shadow); }
+.btn {
+  border: 2.5px solid var(--ink); border-radius: 999px; background: var(--panel); padding: 7px 14px;
+  font-weight: 800; box-shadow: 2px 2px 0 var(--shadow); transition: transform .08s, box-shadow .08s;
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+}
+.btn:hover { transform: translate(-1px,-1px); box-shadow: 3px 3px 0 var(--shadow); }
+.btn:active { transform: translate(2px,2px); box-shadow: 0 0 0 var(--shadow); }
+.btn.lemon { background: var(--lemon); color: #1d1a2b; }
+.btn.tomato { background: var(--tomato); color: #1d1a2b; }
+.btn.mint { background: var(--mint); color: #1d1a2b; }
+.btn.ghost { box-shadow: none; border-style: dashed; background: transparent; }
+.btn.sm { padding: 4px 10px; font-size: 13px; }
+
+header.top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.logo { font-family: var(--font-display); font-size: 30px; line-height: 1; letter-spacing: .5px; transform: rotate(-2deg); }
+.logo span { display: inline-block; background: var(--lemon); color: #1d1a2b; border: 2.5px solid var(--ink); border-radius: 10px; padding: 2px 8px 4px; box-shadow: 3px 3px 0 var(--shadow); transform: rotate(4deg); margin-left: 4px; }
+.room-pill { margin-left: auto; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.tag { font-family: var(--font-code); font-size: 12px; padding: 3px 8px; border: 2px solid var(--ink); border-radius: 8px; background: var(--panel); }
+.banner { font-size: 13px; padding: 8px 12px; border-radius: 12px; border: 2px dashed var(--ink); background: color-mix(in srgb, var(--sky) 25%, var(--panel)); }
+
+/* join card */
+.join { padding: 18px; display: grid; gap: 14px; }
+.join h1 { font-family: var(--font-display); font-weight: 400; font-size: 26px; margin: 0; text-wrap: balance; }
+.join p { margin: 0; color: var(--muted); max-width: 60ch; }
+.field { display: grid; gap: 6px; }
+.field label { font-weight: 800; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.inp { border: 2.5px solid var(--ink); border-radius: 12px; padding: 9px 12px; background: var(--bg); min-width: 0; flex: 1; }
+.avatars { display: flex; gap: 6px; flex-wrap: wrap; }
+.av { width: 42px; height: 42px; font-size: 22px; border-radius: 12px; border: 2.5px solid var(--ink); background: var(--panel); display: grid; place-items: center; }
+.av[aria-pressed="true"] { background: var(--lemon); box-shadow: 2px 2px 0 var(--shadow); transform: rotate(-6deg); }
+
+/* feed */
+.feed { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 6px 10px; display: flex; flex-direction: column; gap: 12px; }
+.empty { margin: auto; text-align: center; color: var(--muted); max-width: 34ch; }
+.empty b { display: block; font-family: var(--font-display); font-weight: 400; font-size: 22px; color: var(--ink); margin-bottom: 6px; }
+.msg { display: flex; gap: 8px; align-items: flex-end; max-width: 88%; animation: pop .35s cubic-bezier(.3,1.6,.5,1) both; }
+.msg.me { align-self: flex-end; flex-direction: row-reverse; }
+.msg .face { font-size: 24px; width: 38px; height: 38px; flex: none; display: grid; place-items: center; border: 2.5px solid var(--ink); border-radius: 50%; background: var(--panel); }
+.bubble { min-width: 0; padding: 9px 12px 8px; background: var(--them); border: 2.5px solid var(--ink); border-radius: 18px 18px 18px 4px; box-shadow: 3px 3px 0 var(--shadow); display: grid; gap: 6px; }
+.msg.me .bubble { background: var(--me); border-radius: 18px 18px 4px 18px; }
+.meta { display: flex; gap: 8px; align-items: baseline; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+.meta b { color: var(--ink); }
+.cipher-badge { font-size: 11px; font-weight: 800; padding: 1px 7px; border-radius: 999px; border: 1.5px solid var(--ink); background: var(--panel); color: var(--ink); }
+.code { font-size: 20px; line-height: 1.35; overflow-wrap: anywhere; word-break: break-word; }
+.code.num { font-family: var(--font-code); font-size: 15px; }
+.code.plain { font-family: var(--font-body); font-size: 16px; font-weight: 600; }
+.plain-reveal { font-family: var(--font-code); font-size: 15px; background: color-mix(in srgb, var(--mint) 30%, var(--panel)); border: 2px dashed var(--ink); border-radius: 10px; padding: 6px 9px; overflow-wrap: anywhere; color: var(--ink); }
+.actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.react { border: 2px solid var(--ink); border-radius: 999px; background: var(--panel); padding: 1px 8px; font-size: 13px; }
+.react[aria-pressed="true"] { background: var(--sky); color: #1d1a2b; }
+.react-add { opacity: .65; }
+.challenge { display: flex; gap: 6px; flex-wrap: wrap; }
+.challenge .inp { padding: 5px 9px; font-size: 14px; min-width: 120px; }
+.solved { font-size: 12px; font-weight: 800; color: var(--ink); background: var(--mint); border: 2px solid var(--ink); border-radius: 8px; padding: 2px 8px; color: #1d1a2b; }
+.shake-msg { align-self: center; font-weight: 800; font-size: 13px; padding: 6px 12px; border: 2.5px solid var(--ink); border-radius: 999px; background: var(--tomato); color: #1d1a2b; transform: rotate(-1.5deg); }
+
+/* composer */
+.composer { padding: 10px; display: grid; gap: 8px; }
+.ciphers { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; }
+.chip { border: 2px solid var(--ink); border-radius: 999px; padding: 4px 11px; background: var(--bg); font-weight: 600; font-size: 13px; white-space: nowrap; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.preview { font-size: 17px; min-height: 26px; padding: 4px 8px; border-radius: 10px; background: var(--bg); border: 2px dashed color-mix(in srgb, var(--ink) 40%, transparent); overflow-wrap: anywhere; color: var(--ink); }
+.preview.num { font-family: var(--font-code); font-size: 14px; }
+.preview:empty::before { content: "a prévia cifrada aparece aqui…"; color: var(--muted); font-size: 13px; }
+.send-row { display: flex; gap: 8px; align-items: center; }
+.send-row .inp { flex: 1; }
+.opts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+.toggle { display: inline-flex; gap: 6px; align-items: center; font-weight: 600; cursor: pointer; }
+.toggle input { width: 18px; height: 18px; accent-color: var(--tomato); }
+
+/* dialogs */
+dialog { border: 2.5px solid var(--ink); border-radius: 18px; box-shadow: 5px 5px 0 var(--shadow); background: var(--panel); color: var(--ink); padding: 0; width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px); }
+dialog::backdrop { background: rgba(20, 16, 40, .45); }
+.dlg { padding: 16px; display: grid; gap: 12px; }
+.dlg h2 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 22px; }
+.dlg p { margin: 0; color: var(--muted); font-size: 14px; }
+.abc { display: grid; grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); gap: 6px; }
+.abc .cell { border: 2px solid var(--ink); border-radius: 10px; padding: 4px; display: grid; justify-items: center; gap: 2px; background: var(--bg); }
+.abc .cell b { font-family: var(--font-code); font-size: 12px; color: var(--muted); }
+.abc .cell input { width: 100%; text-align: center; font-size: 20px; border: none; background: transparent; padding: 2px 0; }
+.abc .cell span.sym { font-size: 20px; }
+.abc .cell.bad { background: color-mix(in srgb, var(--tomato) 35%, var(--bg)); }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.err { color: var(--tomato); font-weight: 800; font-size: 13px; min-height: 1em; }
+
+.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 9px 16px; border-radius: 999px; font-weight: 800; font-size: 14px; z-index: 50; animation: pop .3s both; }
+
+.confetti { position: fixed; top: -40px; font-size: 26px; pointer-events: none; z-index: 60; animation: fall linear forwards; }
+@keyframes fall { to { transform: translateY(110vh) rotate(540deg); } }
+@keyframes pop { from { transform: scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes quake { 0%,100%{transform:none} 15%{transform:translate(-9px,3px) rotate(-1.5deg)} 30%{transform:translate(8px,-4px) rotate(1.5deg)} 45%{transform:translate(-7px,2px)} 60%{transform:translate(6px,3px) rotate(1deg)} 75%{transform:translate(-4px,-2px)} }
+.quake { animation: quake .6s linear 2; }
+@media (prefers-reduced-motion: reduce) { .msg, .toast { animation: none; } .quake { animation: none; } .confetti { display: none; } }
+@media (max-width: 480px) { .logo { font-size: 24px; } .code { font-size: 18px; } .msg { max-width: 96%; } }
+</style>
+
+<div class="app" id="app">
+  <header class="top">
+    <div class="logo" aria-label="Papo Cifrado">Papo<span>Cifrado</span></div>
+    <div class="room-pill" id="roomPill" hidden>
+      <span class="tag" id="roomTag"></span>
+      <button class="btn sm" id="btnAbc" type="button">🔤 Alfabetos</button>
+      <button class="btn sm ghost" id="btnLeave" type="button">Trocar sala</button>
+    </div>
+  </header>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <section class="stk join" id="join">
+    <h1>Entra na sala e fala em código com a galera</h1>
+    <p>Toda mensagem vai cifrada num alfabeto maluco. Quem quiser entender toca em "decifrar", ou chuta a tradução quando for desafio. Todo mundo da mesma sala vê o mesmo papo.</p>
+    <div class="field">
+      <label for="nick">Seu apelido</label>
+      <div class="row">
+        <input class="inp" id="nick" maxlength="24" autocomplete="off">
+        <button class="btn" id="btnDice" type="button" title="Sortear outro apelido">🎲 Sortear</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Seu bonequinho</label>
+      <div class="avatars" id="avatars"></div>
+    </div>
+    <div class="field">
+      <label for="room">Nome da sala secreta</label>
+      <input class="inp" id="room" maxlength="30" autocomplete="off" placeholder="ex: galera-do-fundao">
+    </div>
+    <div class="row"><button class="btn lemon" id="btnJoin" type="button">Entrar na sala →</button></div>
+  </section>
+
+  <section class="stk feed" id="feed" hidden aria-live="polite"></section>
+
+  <section class="stk composer" id="composer" hidden>
+    <div class="ciphers" id="ciphers" role="group" aria-label="Escolha o alfabeto"></div>
+    <div class="preview" id="preview" aria-label="Prévia cifrada"></div>
+    <form class="send-row" id="form">
+      <input class="inp" id="text" maxlength="240" autocomplete="off" placeholder="Escreve normal, o app cifra pra você">
+      <button class="btn lemon" type="submit">Mandar</button>
+    </form>
+    <div class="opts">
+      <label class="toggle"><input type="checkbox" id="chk"> 🧩 Desafio (sem botão de decifrar)</label>
+      <button class="btn sm tomato" id="btnShake" type="button">📳 Tremidinha</button>
+      <label class="toggle" style="margin-left:auto"><input type="checkbox" id="spy"> 🕵️ Modo espião</label>
+    </div>
+  </section>
+</div>
+
+<dialog id="dlg">
+  <div class="dlg">
+    <h2>Alfabetos secretos</h2>
+    <div class="tabs" id="dlgTabs"></div>
+    <p id="dlgHint"></p>
+    <div class="abc" id="abcGrid"></div>
+    <div class="err" id="abcErr"></div>
+    <div class="row" id="dlgActions"></div>
+  </div>
+</dialog>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const LETTERS = "abcdefghijklmnopqrstuvwxyz".split("");
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  };
+  const seg = typeof Intl !== "undefined" && Intl.Segmenter ? new Intl.Segmenter("pt", { granularity: "grapheme" }) : null;
+  const graphemes = (s) => seg ? Array.from(seg.segment(s), (x) => x.segment) : Array.from(s);
+  const normalize = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const fromList = (list) => Object.fromEntries(LETTERS.map((l, i) => [l, list[i]]));
+
+  // ---------- os alfabetos ----------
+  const EMOJI = fromList(["🍕","🐝","🌵","🦖","🥚","🔥","🦒","🏠","🍦","🧃","🥝","🦁","🍉","🥜","🐙","🐧","🧀","🌈","🐍","🌮","🦄","🌋","🐳","🪐","🪀","🧟"]);
+  const GALAXY = fromList(["ᔑ","ʖ","ᓵ","↸","ᒷ","⎓","⊣","⍑","╎","⋮","ꖌ","ꖎ","ᒲ","リ","𝙹","¡","ᑑ","∷","ᓭ","ℸ","⚍","⍊","∴","⨯","∥","⨅"]);
+  const FLIP = fromList(["ɐ","q","ɔ","p","ǝ","ɟ","ƃ","ɥ","ᴉ","ɾ","ʞ","l","ɯ","u","o","d","b","ɹ","s","ʇ","n","ʌ","ʍ","x","ʎ","z"]);
+  const PARTY = ["😎","🤡","👽","🤖","👻","💩","🙈","🦆","🐸","🍔","🍟","🌭","🍩","🎈","🎃","⚽","🎮","🛸","🚀","💎","🧠","👀","🦷","🧦","🍄","🌶️","🥑","🐌","🦀","🐢","🦩","🥨","🧁","🍿","🎺","🪩","🛼","🪅","🧲","🦕"];
+  const defaultGang = () => fromList(shuffle(PARTY).slice(0, 26));
+
+  const CIPHERS = {
+    emoji:  { label: "🍕 Emojês", hint: "Cada letra vira um emoji. A = 🍕, B = 🐝…" },
+    galaxy: { label: "👽 Galáctico", hint: "O alfabeto dos aliens (aquele do Minecraft)." },
+    flip:   { label: "🙃 De cabeça pra baixo", hint: "Vira tudo de ponta-cabeça e de trás pra frente." },
+    num:    { label: "🔢 Numerês", hint: "A=1, B=2… letras separadas por traço." },
+    gang:   { label: "🤫 Alfabeto da galera", hint: "Vocês inventam! Edita em Alfabetos." },
+  };
+
+  function mapEncode(text, map) { return graphemes(normalize(text)).map((c) => map[c] ?? c).join(""); }
+  function mapDecode(code, map) {
+    const rev = Object.fromEntries(Object.entries(map).map(([k, v]) => [v, k]));
+    return graphemes(code).map((c) => rev[c] ?? c).join("");
+  }
+  function encode(cipher, text, gang) {
+    if (cipher === "emoji") return mapEncode(text, EMOJI);
+    if (cipher === "galaxy") return mapEncode(text, GALAXY);
+    if (cipher === "gang") return mapEncode(text, gang);
+    if (cipher === "flip") return graphemes(mapEncode(text, FLIP)).reverse().join("");
+    if (cipher === "num") return normalize(text).trim().split(/\s+/).filter(Boolean)
+      .map((w) => graphemes(w).map((c) => LETTERS.includes(c) ? String(LETTERS.indexOf(c) + 1) : c).join("-")).join("  ");
+    return text;
+  }
+  function decode(cipher, code, gang) {
+    if (cipher === "emoji") return mapDecode(code, EMOJI);
+    if (cipher === "galaxy") return mapDecode(code, GALAXY);
+    if (cipher === "gang") return mapDecode(code, gang || {});
+    if (cipher === "flip") return mapDecode(graphemes(code).reverse().join(""), FLIP);
+    if (cipher === "num") return code.split(/\s{2,}/).map((w) => w.split("-").map((t) => /^\d+$/.test(t) && +t >= 1 && +t <= 26 ? LETTERS[+t - 1] : t).join("")).join(" ");
+    return code;
+  }
+  const squash = (s) => normalize(s).replace(/[^a-z0-9]/g, "");
+
+  // ---------- identidade ----------
+  const ADJ = ["Batata", "Pastel", "Coxinha", "Pudim", "Abacaxi", "Tamanduá", "Capivara", "Jacaré", "Pinguim", "Sushi", "Brigadeiro", "Ornitorrinco"];
+  const SUF = ["Ninja", "Turbo", "Cósmico", "Furtivo", "Dançante", "Sombrio", "Radioativo", "Maluco", "Supremo", "de Pijama", "Secreto", "Voador"];
+  const AVATARS = ["🐸","🦊","🐼","🦄","🐙","🤖","👽","🦖","🐧","🐌","🍕","👻"];
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+  const randomNick = () => `${pick(ADJ)} ${pick(SUF)}`;
+  let deviceKey = store.get("pc.key");
+  if (!deviceKey) { deviceKey = "d" + Math.random().toString(36).slice(2, 12); store.set("pc.key", deviceKey); }
+
+  const state = {
+    nick: store.get("pc.nick") || randomNick(),
+    avatar: store.get("pc.avatar") || pick(AVATARS),
+    room: store.get("pc.room") || "",
+    cipher: store.get("pc.cipher") || "emoji",
+    gang: defaultGang(),
+    msgs: [],
+    revealed: new Set(),
+    spy: false,
+    db: null, unsub: null, unsubRoom: null,
+    bootTs: Date.now(),
+  };
+
+  const dbReady = window.claude?.use ? window.claude.use("db").catch(() => null) : Promise.resolve(null);
+
+  // ---------- telas ----------
+  $("nick").value = state.nick;
+  $("room").value = state.room;
+  function renderAvatars() {
+    $("avatars").replaceChildren(...AVATARS.map((a) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "av"; b.textContent = a;
+      b.setAttribute("aria-pressed", String(a === state.avatar));
+      b.setAttribute("aria-label", "Bonequinho " + a);
+      b.onclick = () => { state.avatar = a; store.set("pc.avatar", a); renderAvatars(); };
+      return b;
+    }));
+  }
+  renderAvatars();
+  $("btnDice").onclick = () => { $("nick").value = randomNick(); };
+
+  function renderCiphers() {
+    $("ciphers").replaceChildren(...Object.entries(CIPHERS).map(([id, c]) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "chip"; b.textContent = c.label; b.title = c.hint;
+      b.setAttribute("aria-pressed", String(id === state.cipher));
+      b.onclick = () => { state.cipher = id; store.set("pc.cipher", id); renderCiphers(); updatePreview(); };
+      return b;
+    }));
+  }
+  function updatePreview() {
+    const t = $("text").value;
+    $("preview").textContent = t.trim() ? encode(state.cipher, t, state.gang) : "";
+    $("preview").classList.toggle("num", state.cipher === "num");
+  }
+  $("text").addEventListener("input", updatePreview);
+
+  const slug = (s) => normalize(s).trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 30);
+
+  $("btnJoin").onclick = () => {
+    const room = slug($("room").value) || "galera";
+    state.nick = $("nick").value.trim().slice(0, 24) || randomNick();
+    state.room = room;
+    store.set("pc.nick", state.nick); store.set("pc.room", room);
+    enterRoom();
+  };
+  $("room").addEventListener("keydown", (e) => { if (e.key === "Enter") $("btnJoin").click(); });
+  $("btnLeave").onclick = () => {
+    state.unsub?.(); state.unsubRoom?.(); state.unsub = state.unsubRoom = null;
+    $("join").hidden = false; $("feed").hidden = $("composer").hidden = $("roomPill").hidden = true;
+  };
+  $("spy").onchange = (e) => { state.spy = e.target.checked; renderFeed(); };
+
+  // ---------- dados ----------
+  const SAMPLE = () => {
+    const t = Date.now();
+    const mk = (nick, avatar, cipher, text, extra = {}) => ({ id: Math.random().toString(36).slice(2), nick, avatar, cipher, code: encode(cipher, text, state.gang), alpha: cipher === "gang" ? state.gang : null, kind: "msg", ts: t - 60000 * (extra.ago || 1), reactions: {}, solved: {}, ...extra });
+    return [
+      mk("Capivara Turbo", "🦊", "emoji", "bora no role hoje?", { ago: 9, reactions: { "😂": { x: true } } }),
+      mk("Pudim Ninja", "🐼", "galaxy", "so se tiver pizza", { ago: 7 }),
+      mk("Capivara Turbo", "🦊", "flip", "tem pizza sim", { ago: 5 }),
+      mk("Pudim Ninja", "🐼", "num", "fechou", { ago: 3, challenge: true }),
+    ];
+  };
+
+  function banner(text) { $("banner").textContent = text; $("banner").hidden = !text; }
+
+  async function enterRoom() {
+    $("join").hidden = true; $("feed").hidden = $("composer").hidden = $("roomPill").hidden = false;
+    $("roomTag").textContent = "sala: " + state.room;
+    renderCiphers(); updatePreview();
+    state.msgs = []; renderFeed(true);
+    banner("Abrindo a sala…");
+    const db = state.db = await dbReady;
+    if (!db) {
+      state.msgs = SAMPLE();
+      banner("Modo treino: aqui as mensagens ficam só no seu aparelho. Abra pelo link do claude.ai, logado, pra conversar de verdade com a galera.");
+      renderFeed(true);
+      return;
+    }
+    banner("");
+    const roomRef = db.doc("rooms/" + state.room);
+    let seeded = false;
+    state.unsubRoom = roomRef.onSnapshot((snap) => {
+      const a = snap.exists ? snap.data().alphabet : null;
+      if (a && typeof a === "object") state.gang = { ...a };
+      else if (!snap.metadata.fromCache && !seeded) { seeded = true; roomRef.set({ alphabet: state.gang, ts: Date.now() }).catch(() => {}); }
+      updatePreview();
+    }, () => {});
+    let first = true;
+    state.unsub = db.collection("rooms/" + state.room + "/msgs").orderBy("ts", "desc").limit(150).onSnapshot((snap) => {
+      const prev = new Set(state.msgs.map((m) => m.id));
+      state.msgs = snap.docs.map((d) => ({ id: d.id, ...d.data() })).reverse();
+      if (!first) for (const m of state.msgs) if (!prev.has(m.id) && m.kind === "shake" && m.by !== deviceKey && m.ts > state.bootTs) quake(m);
+      renderFeed(first || state.msgs.some((m) => !prev.has(m.id)));
+      first = false;
+    }, (e) => banner(e.code === "revoked" ? "O acesso a esta sala mudou." : "Não deu pra carregar a sala agora. Recarrega a página daqui a pouco."));
+  }
+
+  async function addMsg(m) {
+    if (!state.db) { state.msgs.push({ id: Math.random().toString(36).slice(2), ...m }); renderFeed(true); return; }
+    try { await state.db.collection("rooms/" + state.room + "/msgs").add(m); }
+    catch (e) {
+      if (e?.code === "invalid_argument") banner("Você está só como leitor desta sala. Peça pra quem criou o app te dar acesso de Contribuidor.");
+      else if (e?.code === "quota_exceeded") banner("A sala encheu de mensagem! Bora criar uma sala nova.");
+      else toast("Não foi. Tenta de novo.");
+      throw e;
+    }
+  }
+  async function patchMsg(m, patch) {
+    if (!state.db) { deepMerge(m, patch); renderFeed(); return; }
+    try { await state.db.doc("rooms/" + state.room + "/msgs/" + m.id).update(patch); } catch { toast("Não deu pra salvar."); }
+  }
+  function deepMerge(t, s) { for (const [k, v] of Object.entries(s)) { if (v && typeof v === "object" && !Array.isArray(v)) { t[k] = t[k] || {}; deepMerge(t[k], v); } else t[k] = v; } }
+
+  $("form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const text = $("text").value.trim();
+    if (!text) return;
+    const m = {
+      kind: "msg", nick: state.nick, avatar: state.avatar, by: deviceKey, ts: Date.now(),
+      cipher: state.cipher, code: encode(state.cipher, text, state.gang),
+      alpha: state.cipher === "gang" ? { ...state.gang } : null,
+      challenge: $("chk").checked, reactions: {}, solved: {},
+    };
+    $("text").value = ""; updatePreview();
+    try { await addMsg(m); } catch { $("text").value = text; updatePreview(); }
+  });
+
+  let lastShake = 0;
+  $("btnShake").onclick = async () => {
+    if (Date.now() - lastShake < 8000) { toast("Calma! Espera uns segundinhos pra tremer de novo."); return; }
+    lastShake = Date.now();
+    try { await addMsg({ kind: "shake", nick: state.nick, avatar: state.avatar, by: deviceKey, ts: Date.now() }); quake(); } catch {}
+  };
+
+  // ---------- render ----------
+  const REACTS = ["😂", "🤯", "❤️", "💀", "👀"];
+  const time = (ts) => new Date(ts).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+
+  function renderFeed(scroll) {
+    const feed = $("feed");
+    const atBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 80;
+    if (!state.msgs.length) {
+      const e = el("div", "empty");
+      e.append(el("b", null, "Silêncio total 🤐"), "Manda a primeira mensagem cifrada. Escolhe um alfabeto ali embaixo e escreve normal.");
+      feed.replaceChildren(e); return;
+    }
+    feed.replaceChildren(...state.msgs.map(renderMsg));
+    if (scroll || atBottom) feed.scrollTop = feed.scrollHeight;
+  }
+
+  function renderMsg(m) {
+    if (m.kind === "shake") return el("div", "shake-msg", `📳 ${m.nick} mandou uma tremidinha! · ${time(m.ts)}`);
+    const mine = m.by === deviceKey;
+    const wrap = el("div", "msg" + (mine ? " me" : ""));
+    wrap.append(el("div", "face", m.avatar || "🙂"));
+    const b = el("div", "bubble");
+    const meta = el("div", "meta");
+    meta.append(el("b", null, m.nick || "Anônimo"), el("span", "cipher-badge", CIPHERS[m.cipher]?.label || m.cipher), el("span", null, time(m.ts)));
+    if (m.challenge) meta.append(el("span", "cipher-badge", "🧩 desafio"));
+    b.append(meta);
+
+    const code = el("div", "code" + (m.cipher === "num" ? " num" : ""), m.code);
+    b.append(code);
+    const plain = decode(m.cipher, m.code, m.alpha);
+    const solvers = Object.values(m.solved || {}).filter((v) => typeof v === "string");
+    const iSolved = !!(m.solved || {})[deviceKey];
+    const open = state.spy || state.revealed.has(m.id) || mine || iSolved;
+    if (open && (!m.challenge || mine || iSolved || state.spy)) b.append(el("div", "plain-reveal", "🔓 " + plain));
+
+    const act = el("div", "actions");
+    if (m.challenge && !mine && !iSolved && !state.spy) {
+      const box = el("form", "challenge");
+      const inp = el("input", "inp"); inp.placeholder = "Chuta a tradução…"; inp.maxLength = 240; inp.id = "guess-" + m.id; inp.setAttribute("aria-label", "Sua tradução");
+      const go = el("button", "btn sm mint", "Chutar"); go.type = "submit";
+      box.append(inp, go);
+      box.onsubmit = (e) => {
+        e.preventDefault();
+        if (squash(inp.value) && squash(inp.value) === squash(plain)) {
+          confetti(); toast("ACERTOU! 🎉 Você é fluente em " + (CIPHERS[m.cipher]?.label || "código"));
+          patchMsg(m, { solved: { [deviceKey]: state.nick } });
+        } else { inp.value = ""; inp.placeholder = pick(["Errou feio 😬", "Quase… só que não", "Tenta de novo!", "Nananinanão"]); wrap.classList.remove("quake"); void wrap.offsetWidth; wrap.classList.add("quake"); }
+      };
+      b.append(box);
+    } else if (!open) {
+      const dec = el("button", "btn sm", "🔍 decifrar"); dec.type = "button";
+      dec.onclick = () => reveal(m, code, plain);
+      act.append(dec);
+    }
+    if (solvers.length) b.append(el("span", "solved", "🏆 Decifrado por " + solvers.slice(0, 4).join(", ") + (solvers.length > 4 ? ` +${solvers.length - 4}` : "")));
+
+    const rx = m.reactions || {};
+    for (const r of REACTS) {
+      const who = Object.entries(rx[r] || {}).filter(([, v]) => v).length;
+      const meOn = !!(rx[r] || {})[deviceKey];
+      if (!who) continue;
+      const btn = el("button", "react", `${r} ${who}`); btn.type = "button"; btn.setAttribute("aria-pressed", String(meOn));
+      btn.onclick = () => patchMsg(m, { reactions: { [r]: { [deviceKey]: !meOn } } });
+      act.append(btn);
+    }
+    const options = el("span", "actions");
+    for (const r of REACTS) {
+      if ((rx[r] || {})[deviceKey] || Object.values(rx[r] || {}).some(Boolean)) continue;
+      const q = el("button", "react react-add", r); q.type = "button"; q.title = "Reagir com " + r;
+      q.onclick = () => patchMsg(m, { reactions: { [r]: { [deviceKey]: true } } });
+      options.append(q);
+    }
+    act.append(options);
+    b.append(act);
+    wrap.append(b);
+    return wrap;
+  }
+
+  const NOISE = "▓▒░#@%&$*?!ᔑ⍑ꖌ🍕🦖👽";
+  function reveal(m, codeEl, plain) {
+    state.revealed.add(m.id);
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const done = () => { renderFeed(); setTimeout(() => { state.revealed.delete(m.id); renderFeed(); }, 7000); };
+    if (reduce) return done();
+    const target = graphemes(plain); let step = 0; const total = 14;
+    const noise = graphemes(NOISE);
+    const t = setInterval(() => {
+      step++;
+      const k = Math.floor(target.length * step / total);
+      codeEl.textContent = target.map((c, i) => i < k || c === " " ? c : pick(noise)).join("");
+      if (step >= total) { clearInterval(t); done(); }
+    }, 45);
+  }
+
+  // ---------- efeitos ----------
+  let toastT;
+  function toast(text) {
+    document.querySelector(".toast")?.remove(); clearTimeout(toastT);
+    const t = el("div", "toast", text); t.setAttribute("role", "status"); document.body.append(t);
+    toastT = setTimeout(() => t.remove(), 2600);
+  }
+  function quake(m) {
+    const a = $("app"); a.classList.remove("quake"); void a.offsetWidth; a.classList.add("quake");
+    try { navigator.vibrate?.([120, 60, 120]); } catch {}
+    if (m) toast(`📳 ${m.nick} te deu uma tremidinha!`);
+  }
+  function confetti() {
+    const bits = ["🎉", "✨", "🍕", "👽", "🦄", "🔥", "💎"];
+    for (let i = 0; i < 28; i++) {
+      const c = el("span", "confetti", pick(bits));
+      c.style.left = Math.random() * 100 + "vw";
+      c.style.animationDuration = 1.6 + Math.random() * 1.6 + "s";
+      c.style.animationDelay = Math.random() * 0.4 + "s";
+      document.body.append(c); setTimeout(() => c.remove(), 4000);
+    }
+  }
+
+  // ---------- dialogo de alfabetos ----------
+  let dlgTab = "gang", draft = null;
+  $("btnAbc").onclick = () => { draft = { ...state.gang }; dlgTab = "gang"; renderDlg(); $("dlg").showModal(); };
+  function renderDlg() {
+    $("dlgTabs").replaceChildren(...Object.entries(CIPHERS).map(([id, c]) => {
+      const b = el("button", "chip", c.label); b.type = "button"; b.setAttribute("aria-pressed", String(id === dlgTab));
+      b.onclick = () => { dlgTab = id; renderDlg(); };
+      return b;
+    }));
+    $("dlgHint").textContent = dlgTab === "gang"
+      ? "Esse é o alfabeto só da sua sala. Troque qualquer símbolo (um emoji ou caractere por letra, sem repetir) e salve. Mensagens antigas continuam decifráveis."
+      : CIPHERS[dlgTab].hint + " Use essa colinha até decorar.";
+    $("abcErr").textContent = "";
+    const map = dlgTab === "emoji" ? EMOJI : dlgTab === "galaxy" ? GALAXY : dlgTab === "flip" ? FLIP : dlgTab === "num" ? fromList(LETTERS.map((_, i) => String(i + 1))) : draft;
+    const dupes = dlgTab === "gang" ? findDupes(draft) : new Set();
+    $("abcGrid").replaceChildren(...LETTERS.map((l) => {
+      const c = el("div", "cell" + (dupes.has(l) ? " bad" : ""));
+      c.append(el("b", null, l.toUpperCase()));
+      if (dlgTab === "gang") {
+        const i = el("input"); i.id = "abc-" + l; i.value = draft[l] || ""; i.setAttribute("aria-label", "Símbolo da letra " + l.toUpperCase());
+        i.onchange = () => { const g = graphemes(i.value.trim()); draft[l] = g[g.length - 1] || ""; renderDlg(); };
+        c.append(i);
+      } else c.append(el("span", "sym", map[l]));
+      return c;
+    }));
+    const acts = [];
+    if (dlgTab === "gang") {
+      const r = el("button", "btn", "🎲 Sortear tudo"); r.type = "button"; r.onclick = () => { draft = defaultGang(); renderDlg(); };
+      const s = el("button", "btn lemon", "Salvar alfabeto da sala"); s.type = "button"; s.onclick = saveGang;
+      acts.push(r, s);
+    }
+    const x = el("button", "btn ghost", "Fechar"); x.type = "button"; x.onclick = () => $("dlg").close();
+    acts.push(x);
+    $("dlgActions").replaceChildren(...acts);
+  }
+  function findDupes(map) {
+    const seen = {}; const bad = new Set();
+    for (const l of LETTERS) {
+      const v = map[l];
+      if (!v || LETTERS.includes(v) || /\s/.test(v)) { bad.add(l); continue; }
+      if (seen[v]) { bad.add(l); bad.add(seen[v]); } else seen[v] = l;
+    }
+    return bad;
+  }
+  async function saveGang() {
+    if (findDupes(draft).size) { $("abcErr").textContent = "Tem símbolo vazio, repetido ou que é uma letra normal (em vermelho). Arruma e salva de novo."; return; }
+    state.gang = { ...draft };
+    if (state.db) {
+      try { await state.db.doc("rooms/" + state.room).set({ alphabet: state.gang, updatedBy: state.nick, ts: Date.now() }); }
+      catch { $("abcErr").textContent = "Não deu pra salvar. Você precisa de acesso de Contribuidor."; return; }
+    }
+    updatePreview(); $("dlg").close(); toast("Alfabeto da galera salvo! 🤫");
+  }
+
+  // ---------- boot ----------
+  renderCiphers();
+  if (state.room) $("btnJoin").textContent = `Voltar pra sala "${state.room}" →`;
+
+})();
+</script>
